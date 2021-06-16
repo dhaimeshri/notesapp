@@ -1,0 +1,109 @@
+package com.example.asproject.Adapter;
+
+import android.content.Context;
+import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.asproject.AddNewTask;
+import com.example.asproject.MainActivity;
+import com.example.asproject.Model.ToDoModel;
+import com.example.asproject.R;
+import com.example.asproject.Utils.DatabaseHandler;
+
+import java.util.List;
+
+public class ToDoAdapter extends RecyclerView.Adapter<ToDoAdapter.ViewHolder> {
+
+    //define a list of type todomodel named todolist
+    //define the database context as well as the main activity
+    private List<ToDoModel> todoList;
+    private DatabaseHandler db;
+    private MainActivity activity;
+
+    public ToDoAdapter(DatabaseHandler db, MainActivity activity) {
+        this.db = db;
+        this.activity = activity;
+    }
+//ViewHolder describes an item view about its place within the RecyclerView
+    @NonNull
+    @Override
+    public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        //layoutinflater is used to Instantiates a layout XML file into its corresponding View objects
+        //we used it here with the method from to Instantiates xml file named task_layout
+        View itemView = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.task_layout, parent, false);
+        return new ViewHolder(itemView);
+    }
+      // the on bind methoed return the postion of the element we are about to work on
+    @Override
+    public void onBindViewHolder(@NonNull final ViewHolder holder, int position) {
+        db.openDatabase();
+        //search for the item position on the todolist
+        final ToDoModel item = todoList.get(position);
+        //after getting the item position display the text on the screen "holder"
+        holder.task.setText(item.getTask());
+        holder.task.setChecked(toBoolean(item.getStatus()));
+        holder.task.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    db.updateStatus(item.getId(), 1);
+                } else {
+                    db.updateStatus(item.getId(), 0);
+                }
+            }
+        });
+    }
+// this method will always keep the items on the screen unchecked
+    private boolean toBoolean(int n) {
+        return n != 0;
+    }
+//itemcount method will return the number the recyclerview has to print which will is the size of the list
+    @Override
+    public int getItemCount() {
+        return todoList.size();
+    }
+//return the activity context
+    public Context getContext() {
+        return activity;
+    }
+
+    public void setTasks(List<ToDoModel> todoList) {
+        this.todoList = todoList;
+        notifyDataSetChanged();
+    }
+
+    public void deleteItem(int position) {
+        ToDoModel item = todoList.get(position);
+        db.deleteTask(item.getId());
+        todoList.remove(position);
+        notifyItemRemoved(position);
+    }
+
+    public void editItem(int position) {
+        ToDoModel item = todoList.get(position);
+        Bundle bundle = new Bundle();
+        bundle.putInt("id", item.getId());
+        bundle.putString("task", item.getTask());
+        AddNewTask fragment = new AddNewTask();
+        fragment.setArguments(bundle);
+        fragment.show(activity.getSupportFragmentManager(), AddNewTask.TAG);
+    }
+//need to push the checkbox inside the task layout(each task has a checkbox) into here to handel it
+    public static class ViewHolder extends RecyclerView.ViewHolder {
+        //define the checkbox
+        CheckBox task;
+        //create the constructor
+        ViewHolder(View view) {
+            super(view);
+            task = view.findViewById(R.id.todoCheckBox);
+        }
+    }
+}
